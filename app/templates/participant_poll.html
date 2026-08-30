@@ -1,0 +1,1490 @@
+{% extends "base.html" %} {% block title %} Live Poll | Real-Time Polling and
+Analytics System {% endblock %} {% block styles %}
+
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='css/base.css') }}"
+/>
+
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='css/components.css') }}"
+/>
+
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='css/poll.css') }}"
+/>
+
+{% endblock %} {% block content %}
+
+<main class="participant-page">
+  <div class="page-container">
+    {% if error %}
+
+    <!-- ====================================================
+         Error
+    ===================================================== -->
+
+    <section class="form-section">
+      <div class="alert alert-error" role="alert">
+        <strong> Unable to continue </strong>
+
+        <span> {{ error }} </span>
+      </div>
+
+      <a href="{{ url_for('participant.join_poll') }}" class="primary-button">
+        Join another poll
+      </a>
+    </section>
+
+    {% elif poll and participant %}
+
+    <!-- ====================================================
+         Participant Header
+    ===================================================== -->
+
+    <header class="participant-header">
+      <div>
+        <span class="eyebrow"> LIVE POLL </span>
+
+        <h1>{{ poll.question }}</h1>
+
+        <p>
+          Poll code:
+          <strong> {{ poll.code }} </strong>
+        </p>
+      </div>
+
+      <!-- ==================================================
+           Connection Status
+      =================================================== -->
+
+      <div
+        id="participant-connection-status"
+        class="poll-status"
+        aria-live="polite"
+      >
+        <span id="participant-connection-dot" class="poll-status-dot"></span>
+
+        <span id="participant-connection-text"> Connecting... </span>
+      </div>
+    </header>
+
+    <!-- ====================================================
+         Poll Status
+    ===================================================== -->
+
+    <section class="participant-status-card" id="participant-status-card">
+      <div class="participant-status-main">
+        <span
+          id="participant-status-dot"
+          class="poll-status-dot {% if poll.status == 'active' %} active {% elif poll.status == 'paused' %} paused {% elif poll.status == 'ended' %} ended {% elif poll.status == 'expired' %} expired {% endif %}"
+        ></span>
+
+        <strong id="participant-status-text">
+          {{ poll.status|capitalize }}
+        </strong>
+      </div>
+
+      <span id="participant-status-message" class="participant-status-message">
+        {% if poll.status == "active" %} Voting is open. {% elif poll.status ==
+        "paused" %} Voting is temporarily paused. {% elif poll.status == "ended"
+        %} This poll has ended. {% elif poll.status == "expired" %} This poll
+        has expired. {% else %} Waiting for the host to start the poll. {% endif
+        %}
+      </span>
+
+      <!-- ==================================================
+           Time Remaining
+      =================================================== -->
+
+      {% if poll.time_limit %}
+
+      <div id="participant-timer" class="participant-timer" aria-live="polite">
+        <span class="eyebrow"> TIME REMAINING </span>
+
+        <strong id="participant-timer-value"> --:-- </strong>
+      </div>
+
+      {% endif %}
+    </section>
+
+    <!-- ====================================================
+         Voting Section
+    ===================================================== -->
+
+    <section
+      class="form-section participant-voting-card"
+      id="participant-voting-card"
+    >
+      <!-- ==================================================
+           State Message
+      ================================================== -->
+
+      <div id="participant-state-message" class="poll-state-message">
+        <h2 id="participant-state-title">
+          {% if poll.status == "paused" %} Voting is paused {% elif poll.status
+          == "ended" %} Poll ended {% elif poll.status == "expired" %} Poll
+          expired {% else %} Waiting for the host {% endif %}
+        </h2>
+
+        <p id="participant-state-description">
+          {% if poll.status == "paused" %} The host has temporarily paused this
+          poll. You can continue when voting resumes. {% elif poll.status ==
+          "ended" %} This poll is no longer accepting votes. {% elif poll.status
+          == "expired" %} The time limit for this poll has expired. {% else %}
+          The host hasn't started the poll yet. Keep this page open. {% endif %}
+        </p>
+      </div>
+
+      <!-- ==================================================
+           Voting Form
+
+           The form is ALWAYS rendered.
+           JavaScript controls visibility.
+      =================================================== -->
+
+      <form
+        method="POST"
+        action="{{ url_for(
+          'participant.submit_vote',
+          poll_code=poll.code
+        ) }}"
+        id="vote-form"
+      >
+        <div class="participant-options" id="participant-options">
+          {% for option in poll.options %}
+
+          <label class="participant-option">
+            <input
+              type="{{
+                'checkbox'
+                if poll.multiple_choice
+                else 'radio'
+              }}"
+              name="selected_options"
+              value="{{ loop.index0 }}"
+              {%
+              if
+              current_vote
+              and
+              loop.index0
+              in
+              current_vote
+              %}
+              checked
+              {%
+              endif
+              %}
+            />
+
+            <span class="participant-option-marker"> {{ loop.index }} </span>
+
+            <span class="participant-option-text"> {{ option }} </span>
+          </label>
+
+          {% endfor %}
+        </div>
+
+        <!-- ==================================================
+             Submit Vote
+        =================================================== -->
+
+        <button
+          type="submit"
+          class="primary-button participant-submit-button"
+          id="submit-vote-button"
+        >
+          <span id="submit-vote-text">
+            {% if participant.has_voted %} Change vote {% else %} Submit vote {%
+            endif %}
+          </span>
+
+          <span aria-hidden="true"> → </span>
+        </button>
+      </form>
+
+      <!-- ==================================================
+           Vote Success
+      =================================================== -->
+
+      {% if participant.has_voted %}
+
+      <div class="vote-success-message" id="vote-success-message">
+        <strong> Your vote has been recorded. </strong>
+
+        {% if poll.allow_vote_changes %}
+
+        <span>
+          You can change your selection while voting remains active.
+        </span>
+
+        {% else %}
+
+        <span> Your response has been submitted successfully. </span>
+
+        {% endif %}
+      </div>
+
+      {% endif %}
+    </section>
+
+    <!-- ====================================================
+         Live Results
+    ===================================================== -->
+
+    {% if poll.show_live_results %}
+
+    <section
+      class="form-section participant-results-card"
+      id="participant-results-card"
+    >
+      <div class="participant-results-header">
+        <div>
+          <span class="eyebrow"> LIVE RESULTS </span>
+
+          <h2>Current results</h2>
+        </div>
+
+        <span class="live-indicator">
+          <span class="live-indicator-dot"></span>
+
+          Live
+        </span>
+      </div>
+
+      <div id="participant-live-results" class="participant-live-results">
+        {% for option in poll.options %} {% set option_votes = 0 %} {% set
+        option_percentage = 0 %} {% if analytics %} {% if analytics.option_votes
+        is defined %} {% set option_votes = analytics.option_votes[loop.index0]
+        | default(0) %} {% endif %} {% if analytics.option_percentages is
+        defined %} {% set option_percentage =
+        analytics.option_percentages[loop.index0] | default(0) %} {% endif %} {%
+        endif %}
+
+        <div
+          class="participant-result-row"
+          data-option-index="{{ loop.index0 }}"
+        >
+          <div class="participant-result-header">
+            <strong> {{ option }} </strong>
+
+            <span class="participant-result-percentage">
+              {{ option_percentage }}%
+            </span>
+          </div>
+
+          <div class="participant-result-progress">
+            <div
+              class="participant-result-progress-bar"
+              style="width: {{ option_percentage }}%;"
+            ></div>
+          </div>
+
+          <span class="participant-result-votes">
+            {{ option_votes }} {{ "vote" if option_votes == 1 else "votes" }}
+          </span>
+        </div>
+
+        {% endfor %}
+      </div>
+    </section>
+
+    {% endif %}
+
+    <!-- ====================================================
+         Live Message
+    ===================================================== -->
+
+    <div
+      id="participant-live-message"
+      class="participant-live-message"
+      aria-live="polite"
+    ></div>
+
+    <!-- ====================================================
+         Poll Data
+    ===================================================== -->
+
+    <script id="participant-poll-data" type="application/json">
+      {
+        "poll_code": {{ poll.code | tojson }},
+        "status": {{ poll.status | tojson }},
+        "ends_at": {{
+          poll.ends_at.isoformat() | tojson
+          if poll.ends_at
+          else "null"
+        }},
+        "multiple_choice": {{ poll.multiple_choice | tojson }},
+        "allow_vote_changes": {{ poll.allow_vote_changes | tojson }},
+        "has_voted": {{ participant.has_voted | tojson }}
+      }
+    </script>
+
+    {% endif %}
+  </div>
+</main>
+
+{% endblock %} {% block scripts %}
+
+<script src="{{ url_for('static', filename='js/socket.js') }}"></script>
+
+{% if poll and participant %}
+
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+
+    /* ======================================================
+       Poll Information
+    ======================================================= */
+
+    const pollCode =
+      "{{ poll.code }}";
+
+    const initialStatus =
+      {{ poll.status | tojson }};
+
+    const initialEndsAt =
+      {{
+        poll.ends_at.isoformat() | tojson
+        if poll.ends_at
+        else "null"
+      }};
+
+    /* ======================================================
+       DOM References
+    ======================================================= */
+
+    const connectionDot =
+      document.getElementById(
+        "participant-connection-dot"
+      );
+
+    const connectionText =
+      document.getElementById(
+        "participant-connection-text"
+      );
+
+    const statusDot =
+      document.getElementById(
+        "participant-status-dot"
+      );
+
+    const statusText =
+      document.getElementById(
+        "participant-status-text"
+      );
+
+    const statusMessage =
+      document.getElementById(
+        "participant-status-message"
+      );
+
+    const stateMessage =
+      document.getElementById(
+        "participant-state-message"
+      );
+
+    const stateTitle =
+      document.getElementById(
+        "participant-state-title"
+      );
+
+    const stateDescription =
+      document.getElementById(
+        "participant-state-description"
+      );
+
+    const voteForm =
+      document.getElementById(
+        "vote-form"
+      );
+
+    const submitButton =
+      document.getElementById(
+        "submit-vote-button"
+      );
+
+    const resultsContainer =
+      document.getElementById(
+        "participant-live-results"
+      );
+
+    const liveMessage =
+      document.getElementById(
+        "participant-live-message"
+      );
+
+    const timer =
+      document.getElementById(
+        "participant-timer"
+      );
+
+    const timerValue =
+      document.getElementById(
+        "participant-timer-value"
+      );
+
+    /* ======================================================
+       Timer State
+    ======================================================= */
+
+    let timerInterval =
+      null;
+
+    let timerEndsAt =
+      null;
+
+    let timerStatus =
+      initialStatus;
+
+    /* ======================================================
+       Parse Server Timestamp
+    ======================================================= */
+
+    function parseServerDate(value) {
+
+      if (!value) {
+        return null;
+      }
+
+      const stringValue =
+        String(value);
+
+      const normalizedValue =
+        stringValue.endsWith("Z")
+          ? stringValue
+          : `${stringValue}Z`;
+
+      const timestamp =
+        new Date(
+          normalizedValue
+        ).getTime();
+
+      if (
+        !Number.isFinite(timestamp)
+      ) {
+        return null;
+      }
+
+      return timestamp;
+    }
+
+    /* ======================================================
+       Format Timer
+    ======================================================= */
+
+    function formatTime(
+      totalSeconds
+    ) {
+
+      const safeSeconds =
+        Math.max(
+          0,
+          Math.ceil(
+            totalSeconds
+          )
+        );
+
+      const minutes =
+        Math.floor(
+          safeSeconds / 60
+        );
+
+      const seconds =
+        safeSeconds % 60;
+
+      return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+    }
+
+    /* ======================================================
+       Stop Timer
+    ======================================================= */
+
+    function stopTimer() {
+
+      if (
+        timerInterval !== null
+      ) {
+
+        window.clearInterval(
+          timerInterval
+        );
+
+        timerInterval =
+          null;
+      }
+    }
+
+    /* ======================================================
+       Update Timer Display
+    ======================================================= */
+
+    function updateTimerDisplay() {
+
+      if (
+        !timer ||
+        !timerValue ||
+        !timerEndsAt
+      ) {
+        return;
+      }
+
+      const remainingMilliseconds =
+        timerEndsAt -
+        Date.now();
+
+      const remainingSeconds =
+        remainingMilliseconds / 1000;
+
+      timerValue.textContent =
+        formatTime(
+          remainingSeconds
+        );
+
+      if (
+        remainingMilliseconds <= 0
+      ) {
+
+        timerValue.textContent =
+          "00:00";
+
+        stopTimer();
+      }
+    }
+
+    /* ======================================================
+       Start Timer
+    ======================================================= */
+
+    function startTimer() {
+
+      if (
+        !timer ||
+        !timerValue ||
+        !timerEndsAt
+      ) {
+        return;
+      }
+
+      stopTimer();
+
+      updateTimerDisplay();
+
+      timerInterval =
+        window.setInterval(
+          updateTimerDisplay,
+          250
+        );
+    }
+
+    /* ======================================================
+       Update Timer State
+    ======================================================= */
+
+    function updateTimerState(
+      status,
+      endsAt
+    ) {
+
+      timerStatus =
+        status;
+
+      /*
+       * Replace the timestamp only when
+       * the server provides a new value.
+       */
+
+      if (endsAt) {
+
+        const parsedEndsAt =
+          parseServerDate(
+            endsAt
+          );
+
+        if (
+          parsedEndsAt !== null
+        ) {
+
+          timerEndsAt =
+            parsedEndsAt;
+        }
+      }
+
+      if (
+        !timer ||
+        !timerValue
+      ) {
+        return;
+      }
+
+      /* --------------------------------------------------
+         Active
+      -------------------------------------------------- */
+
+      if (
+        status === "active"
+      ) {
+
+        if (timerEndsAt) {
+          startTimer();
+        }
+
+        return;
+      }
+
+      /* --------------------------------------------------
+         Paused
+      -------------------------------------------------- */
+
+      if (
+        status === "paused"
+      ) {
+
+        updateTimerDisplay();
+
+        stopTimer();
+
+        return;
+      }
+
+      /* --------------------------------------------------
+         Expired
+      -------------------------------------------------- */
+
+      if (
+        status === "expired"
+      ) {
+
+        stopTimer();
+
+        timerValue.textContent =
+          "00:00";
+
+        return;
+      }
+
+      /* --------------------------------------------------
+         Ended
+      -------------------------------------------------- */
+
+      if (
+        status === "ended"
+      ) {
+
+        updateTimerDisplay();
+
+        stopTimer();
+      }
+    }
+
+    /* ======================================================
+       Connection Status
+    ======================================================= */
+
+    function updateConnectionStatus(
+      connected,
+      message
+    ) {
+
+      if (connectionDot) {
+
+        connectionDot.classList.toggle(
+          "active",
+          connected
+        );
+      }
+
+      if (connectionText) {
+
+        connectionText.textContent =
+          message ||
+          (
+            connected
+              ? "Connected to live polling server."
+              : "Disconnected from live polling server."
+          );
+      }
+    }
+
+    /* ======================================================
+       State Message
+    ======================================================= */
+
+    function updateStateMessage(
+      status
+    ) {
+
+      if (!stateMessage) {
+        return;
+      }
+
+      if (
+        status === "active"
+      ) {
+
+        stateMessage.hidden =
+          true;
+
+        return;
+      }
+
+      stateMessage.hidden =
+        false;
+
+      if (
+        status === "paused"
+      ) {
+
+        if (stateTitle) {
+
+          stateTitle.textContent =
+            "Voting is paused";
+        }
+
+        if (stateDescription) {
+
+          stateDescription.textContent =
+            "The host has temporarily paused this poll. You can continue when voting resumes.";
+        }
+
+        return;
+      }
+
+      if (
+        status === "ended"
+      ) {
+
+        if (stateTitle) {
+
+          stateTitle.textContent =
+            "Poll ended";
+        }
+
+        if (stateDescription) {
+
+          stateDescription.textContent =
+            "This poll is no longer accepting votes.";
+        }
+
+        return;
+      }
+
+      if (
+        status === "expired"
+      ) {
+
+        if (stateTitle) {
+
+          stateTitle.textContent =
+            "Poll expired";
+        }
+
+        if (stateDescription) {
+
+          stateDescription.textContent =
+            "The time limit for this poll has expired.";
+        }
+
+        return;
+      }
+
+      if (stateTitle) {
+
+        stateTitle.textContent =
+          "Waiting for the host";
+      }
+
+      if (stateDescription) {
+
+        stateDescription.textContent =
+          "The host hasn't started the poll yet. Keep this page open.";
+      }
+    }
+
+    /* ======================================================
+       Poll Status
+    ======================================================= */
+
+    function updatePollStatus(
+      status
+    ) {
+
+      if (!status) {
+        return;
+      }
+
+      /* --------------------------------------------------
+         Status Text
+      -------------------------------------------------- */
+
+      if (statusText) {
+
+        statusText.textContent =
+          status.charAt(0).toUpperCase() +
+          status.slice(1);
+      }
+
+      /* --------------------------------------------------
+         Status Dot
+      -------------------------------------------------- */
+
+      if (statusDot) {
+
+        statusDot.classList.remove(
+          "active",
+          "paused",
+          "ended",
+          "expired"
+        );
+
+        if (
+          status === "active"
+        ) {
+
+          statusDot.classList.add(
+            "active"
+          );
+
+        } else if (
+          status === "paused"
+        ) {
+
+          statusDot.classList.add(
+            "paused"
+          );
+
+        } else if (
+          status === "ended"
+        ) {
+
+          statusDot.classList.add(
+            "ended"
+          );
+
+        } else if (
+          status === "expired"
+        ) {
+
+          statusDot.classList.add(
+            "expired"
+          );
+        }
+      }
+
+      /* --------------------------------------------------
+         Status Message
+      -------------------------------------------------- */
+
+      if (statusMessage) {
+
+        if (
+          status === "active"
+        ) {
+
+          statusMessage.textContent =
+            "Voting is open.";
+
+        } else if (
+          status === "paused"
+        ) {
+
+          statusMessage.textContent =
+            "Voting is temporarily paused.";
+
+        } else if (
+          status === "ended"
+        ) {
+
+          statusMessage.textContent =
+            "This poll has ended.";
+
+        } else if (
+          status === "expired"
+        ) {
+
+          statusMessage.textContent =
+            "This poll has expired.";
+
+        } else {
+
+          statusMessage.textContent =
+            "Waiting for the host to start the poll.";
+        }
+      }
+
+      /* --------------------------------------------------
+         Voting Form
+      -------------------------------------------------- */
+
+      if (voteForm) {
+
+        const isActive =
+          status === "active";
+
+        voteForm.hidden =
+          !isActive;
+
+        const inputs =
+          voteForm.querySelectorAll(
+            "input"
+          );
+
+        inputs.forEach(
+          (input) => {
+
+            input.disabled =
+              !isActive;
+          }
+        );
+
+        if (submitButton) {
+
+          submitButton.disabled =
+            !isActive;
+        }
+      }
+
+      /* --------------------------------------------------
+         State Message
+      -------------------------------------------------- */
+
+      updateStateMessage(
+        status
+      );
+    }
+
+    /* ======================================================
+       Live Results
+    ======================================================= */
+
+    function updateLiveResults(
+      analytics
+    ) {
+
+      if (
+        !analytics ||
+        !resultsContainer
+      ) {
+        return;
+      }
+
+      const optionVotes =
+        Array.isArray(
+          analytics.option_votes
+        )
+          ? analytics.option_votes
+          : [];
+
+      const optionPercentages =
+        Array.isArray(
+          analytics.option_percentages
+        )
+          ? analytics.option_percentages
+          : [];
+
+      const rows =
+        resultsContainer.querySelectorAll(
+          ".participant-result-row"
+        );
+
+      rows.forEach(
+        (row) => {
+
+          const index =
+            Number(
+              row.dataset.optionIndex
+            );
+
+          const votes =
+            Number(
+              optionVotes[index] || 0
+            );
+
+          const percentage =
+            Number(
+              optionPercentages[index] || 0
+            );
+
+          const percentageElement =
+            row.querySelector(
+              ".participant-result-percentage"
+            );
+
+          const progressBar =
+            row.querySelector(
+              ".participant-result-progress-bar"
+            );
+
+          const votesElement =
+            row.querySelector(
+              ".participant-result-votes"
+            );
+
+          if (
+            percentageElement
+          ) {
+
+            percentageElement.textContent =
+              `${percentage}%`;
+          }
+
+          if (
+            progressBar
+          ) {
+
+            const safePercentage =
+              Math.min(
+                Math.max(
+                  percentage,
+                  0
+                ),
+                100
+              );
+
+            progressBar.style.width =
+              `${safePercentage}%`;
+          }
+
+          if (
+            votesElement
+          ) {
+
+            votesElement.textContent =
+              `${votes} ${
+                votes === 1
+                  ? "vote"
+                  : "votes"
+              }`;
+          }
+        }
+      );
+    }
+
+    /* ======================================================
+       Live Message
+    ======================================================= */
+
+    function showLiveMessage(
+      message
+    ) {
+
+      if (!liveMessage) {
+        return;
+      }
+
+      liveMessage.textContent =
+        message;
+
+      liveMessage.classList.add(
+        "visible"
+      );
+
+      window.clearTimeout(
+        showLiveMessage.timeout
+      );
+
+      showLiveMessage.timeout =
+        window.setTimeout(
+          () => {
+
+            liveMessage.classList.remove(
+              "visible"
+            );
+
+          },
+          2200
+        );
+    }
+
+    /* ======================================================
+       Socket Connection
+    ======================================================= */
+
+    PollSocket.connect();
+
+    PollSocket.on(
+      "connection_status",
+      (data) => {
+
+        updateConnectionStatus(
+          Boolean(
+            data &&
+            data.connected
+          ),
+          data &&
+          data.message
+        );
+      }
+    );
+
+    /* ======================================================
+       Socket Error
+    ======================================================= */
+
+    PollSocket.on(
+      "socket_error",
+      (data) => {
+
+        console.error(
+          "Socket error:",
+          data
+        );
+
+        showLiveMessage(
+          data.message ||
+          "Unable to complete the request."
+        );
+
+        if (submitButton) {
+
+          submitButton.disabled =
+            false;
+        }
+      }
+    );
+
+    /* ======================================================
+       Poll Room Joined
+    ======================================================= */
+
+    PollSocket.on(
+      "poll_room_joined",
+      (data) => {
+
+        if (
+          !data ||
+          data.poll_code !==
+            pollCode
+        ) {
+          return;
+        }
+
+        updatePollStatus(
+          data.status
+        );
+
+        updateTimerState(
+          data.status,
+          data.ends_at
+        );
+      }
+    );
+
+    /* ======================================================
+       Poll State
+    ======================================================= */
+
+    PollSocket.on(
+      "poll_state",
+      (data) => {
+
+        if (
+          !data ||
+          data.poll_code !==
+            pollCode
+        ) {
+          return;
+        }
+
+        updatePollStatus(
+          data.status
+        );
+
+        updateTimerState(
+          data.status,
+          data.ends_at
+        );
+      }
+    );
+
+    /* ======================================================
+       Poll Started
+    ======================================================= */
+
+    PollSocket.on(
+      "poll_started",
+      (data) => {
+
+        if (
+          !data ||
+          data.poll_code !==
+            pollCode
+        ) {
+          return;
+        }
+
+        updatePollStatus(
+          "active"
+        );
+
+        updateTimerState(
+          "active",
+          data.ends_at
+        );
+
+        showLiveMessage(
+          "Voting is now open."
+        );
+      }
+    );
+
+    /* ======================================================
+       Poll Paused
+    ======================================================= */
+
+    PollSocket.on(
+      "poll_paused",
+      (data) => {
+
+        if (
+          !data ||
+          data.poll_code !==
+            pollCode
+        ) {
+          return;
+        }
+
+        updatePollStatus(
+          "paused"
+        );
+
+        updateTimerState(
+          "paused",
+          data.ends_at
+        );
+
+        showLiveMessage(
+          "Voting has been paused."
+        );
+      }
+    );
+
+    /* ======================================================
+       Poll Resumed
+    ======================================================= */
+
+    PollSocket.on(
+      "poll_resumed",
+      (data) => {
+
+        if (
+          !data ||
+          data.poll_code !==
+            pollCode
+        ) {
+          return;
+        }
+
+        updatePollStatus(
+          "active"
+        );
+
+        updateTimerState(
+          "active",
+          data.ends_at
+        );
+
+        showLiveMessage(
+          "Voting has resumed."
+        );
+      }
+    );
+
+    /* ======================================================
+       Poll Ended
+    ======================================================= */
+
+    PollSocket.on(
+      "poll_ended",
+      (data) => {
+
+        if (
+          !data ||
+          data.poll_code !==
+            pollCode
+        ) {
+          return;
+        }
+
+        updatePollStatus(
+          "ended"
+        );
+
+        updateTimerState(
+          "ended",
+          data.ends_at
+        );
+
+        showLiveMessage(
+          "This poll has ended."
+        );
+      }
+    );
+
+    /* ======================================================
+       Poll Expired
+    ======================================================= */
+
+    PollSocket.on(
+      "poll_expired",
+      (data) => {
+
+        if (
+          !data ||
+          data.poll_code !==
+            pollCode
+        ) {
+          return;
+        }
+
+        updatePollStatus(
+          "expired"
+        );
+
+        updateTimerState(
+          "expired",
+          data.ends_at
+        );
+
+        showLiveMessage(
+          "The time limit has expired."
+        );
+      }
+    );
+
+    /* ======================================================
+       Results Updated
+    ======================================================= */
+
+    PollSocket.on(
+      "results_updated",
+      (data) => {
+
+        if (
+          !data ||
+          data.poll_code !==
+            pollCode
+        ) {
+          return;
+        }
+
+        updateLiveResults(
+          data.analytics
+        );
+
+        showLiveMessage(
+          "Results updated."
+        );
+      }
+    );
+
+    /* ======================================================
+       Vote Submitted
+    ======================================================= */
+
+    PollSocket.on(
+      "vote_submitted",
+      (data) => {
+
+        if (
+          !data ||
+          data.poll_code !==
+            pollCode
+        ) {
+          return;
+        }
+
+        showLiveMessage(
+          "Vote recorded."
+        );
+      }
+    );
+
+    /* ======================================================
+       Vote Updated
+    ======================================================= */
+
+    PollSocket.on(
+      "vote_updated",
+      (data) => {
+
+        if (
+          !data ||
+          data.poll_code !==
+            pollCode
+        ) {
+          return;
+        }
+
+        showLiveMessage(
+          "Vote updated."
+        );
+      }
+    );
+
+    /* ======================================================
+       Form Submission
+    ======================================================= */
+
+    if (voteForm) {
+
+      voteForm.addEventListener(
+        "submit",
+        () => {
+
+          if (submitButton) {
+
+            submitButton.disabled =
+              true;
+          }
+        }
+      );
+    }
+
+    /* ======================================================
+       Initial Timer
+    ======================================================= */
+
+    const parsedInitialEndsAt =
+      parseServerDate(
+        initialEndsAt
+      );
+
+    if (
+      parsedInitialEndsAt !== null
+    ) {
+
+      timerEndsAt =
+        parsedInitialEndsAt;
+    }
+
+    /* ======================================================
+       Initial Poll State
+    ======================================================= */
+
+    updatePollStatus(
+      initialStatus
+    );
+
+    updateTimerState(
+      initialStatus,
+      initialEndsAt
+    );
+
+    /* ======================================================
+       Join Poll Room
+
+       All listeners are registered
+       before joining the room.
+    ======================================================= */
+
+    PollSocket.joinPoll(
+      pollCode
+    );
+
+  });
+</script>
+
+{% endif %} {% endblock %}

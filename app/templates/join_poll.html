@@ -1,0 +1,93 @@
+{% extends "base.html" %} {% block title %} Join Poll | Real-Time Polling and
+Analytics System {% endblock %} {% block styles %}
+
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='css/base.css') }}"
+/>
+
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='css/components.css') }}"
+/>
+
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='css/poll.css') }}"
+/>
+
+{% endblock %} {% block content %}
+
+<main class="create-poll-page">
+  <div class="page-container">
+    <header class="page-header">
+      <a href="{{ url_for('main.index') }}" class="back-link">
+        ← Back to home
+      </a>
+
+      <div class="page-heading">
+        <span class="eyebrow"> PARTICIPANT </span>
+
+        <h1>Join a live poll</h1>
+
+        <p>Enter the poll code shared by your host to join the live session.</p>
+      </div>
+    </header>
+
+    {% if error %}
+
+    <div class="alert alert-error" role="alert">
+      <strong> Unable to join </strong>
+
+      <span> {{ error }} </span>
+    </div>
+
+    {% endif %}
+
+    <section class="form-section">
+      <form
+        method="POST"
+        action="{{ url_for('participant.join_poll') }}"
+        id="join-poll-form"
+      >
+        <div class="form-field">
+          <label for="poll-code"> Poll code </label>
+
+          <input
+            type="text"
+            id="poll-code"
+            name="poll_code"
+            maxlength="6"
+            minlength="6"
+            pattern="[A-Za-z0-9]{6}"
+            placeholder="ABC123"
+            autocomplete="off"
+            autocapitalize="characters"
+            required
+            style="
+              width: 100%;
+              min-height: 58px;
+              padding: 0.75rem 1rem;
+              border: 1px solid var(--color-border);
+              border-radius: 14px;
+              font-size: 1.25rem;
+              font-weight: 700;
+              letter-spacing: 0.15em;
+              text-transform: uppercase;
+            "
+          />
+        </div>
+
+        <button
+          type="submit"
+          class="primary-button"
+          style="width: 100%; margin-top: 1.25rem"
+        >
+          Join poll →
+        </button>
+      </form>
+    </section>
+  </div>
+</main>
+
+{% endblock %}

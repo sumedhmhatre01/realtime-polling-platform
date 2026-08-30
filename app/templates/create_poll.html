@@ -1,0 +1,328 @@
+{% extends "base.html" %} {% block title %} Create Poll | Real-Time Polling and
+Analytics System {% endblock %} {% block styles %}
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='css/base.css') }}"
+/>
+
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='css/components.css') }}"
+/>
+
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='css/poll.css') }}"
+/>
+{% endblock %} {% block content %}
+
+<main class="create-poll-page">
+  <div class="page-container">
+    <header class="page-header">
+      <a href="{{ url_for('main.index') }}" class="back-link">
+        ← Back to home
+      </a>
+
+      <div class="page-heading">
+        <span class="eyebrow"> HOST CONTROL </span>
+
+        <h1>Create your live poll</h1>
+
+        <p>
+          Set up your question, configure voting, and launch your live session.
+        </p>
+      </div>
+    </header>
+
+    {% if error %}
+
+    <div class="alert alert-error" role="alert">
+      <strong> Unable to create poll </strong>
+
+      <span> {{ error }} </span>
+    </div>
+
+    {% endif %}
+
+    <form
+      method="POST"
+      action="{{ url_for('host.create_poll') }}"
+      class="poll-form"
+      id="poll-create-form"
+      novalidate
+    >
+      <!-- ==================================================
+                 Question
+            =================================================== -->
+
+      <section class="form-section">
+        <div class="section-heading">
+          <div>
+            <span class="section-number"> 01 </span>
+
+            <h2>Ask your question</h2>
+
+            <p>Keep your question clear and easy to understand.</p>
+          </div>
+        </div>
+
+        <div class="form-field">
+          <label for="question"> Poll question </label>
+
+          <textarea
+            id="question"
+            name="question"
+            maxlength="500"
+            rows="4"
+            placeholder="What would you like to ask?"
+            required
+          ></textarea>
+
+          <div class="field-footer">
+            <span> Maximum 500 characters </span>
+
+            <span id="question-count"> 0 / 500 </span>
+          </div>
+        </div>
+      </section>
+
+      <!-- ==================================================
+                 Options
+            =================================================== -->
+
+      <section class="form-section">
+        <div class="section-heading">
+          <div>
+            <span class="section-number"> 02 </span>
+
+            <h2>Add answer options</h2>
+
+            <p>Add at least two options.</p>
+          </div>
+        </div>
+
+        <div id="options-container" class="options-container">
+          <div class="option-row">
+            <span class="option-index"> A </span>
+
+            <input
+              type="text"
+              name="options"
+              maxlength="200"
+              placeholder="First option"
+              required
+            />
+
+            <button
+              type="button"
+              class="remove-option"
+              aria-label="Remove option"
+              disabled
+            >
+              ×
+            </button>
+          </div>
+
+          <div class="option-row">
+            <span class="option-index"> B </span>
+
+            <input
+              type="text"
+              name="options"
+              maxlength="200"
+              placeholder="Second option"
+              required
+            />
+
+            <button
+              type="button"
+              class="remove-option"
+              aria-label="Remove option"
+              disabled
+            >
+              ×
+            </button>
+          </div>
+        </div>
+
+        <button type="button" id="add-option" class="secondary-button">
+          + Add option
+        </button>
+
+        <p id="option-limit-message" class="field-message" hidden>
+          You can add up to 10 options.
+        </p>
+      </section>
+
+      <!-- ==================================================
+                 Voting Settings
+            =================================================== -->
+
+      <section class="form-section">
+        <div class="section-heading">
+          <div>
+            <span class="section-number"> 03 </span>
+
+            <h2>Voting settings</h2>
+
+            <p>Customize how participants can vote.</p>
+          </div>
+        </div>
+
+        <div class="settings-grid">
+          <label class="setting-card">
+            <input
+              type="checkbox"
+              name="multiple_choice"
+              id="multiple-choice"
+            />
+
+            <span class="setting-content">
+              <strong> Multiple choice </strong>
+
+              <small> Participants can select more than one option. </small>
+            </span>
+          </label>
+
+          <label class="setting-card">
+            <input
+              type="checkbox"
+              name="anonymous_voting"
+              id="anonymous-voting"
+            />
+
+            <span class="setting-content">
+              <strong> Anonymous voting </strong>
+
+              <small> Participant identities are hidden from results. </small>
+            </span>
+          </label>
+
+          <label class="setting-card">
+            <input
+              type="checkbox"
+              name="allow_vote_changes"
+              id="allow-vote-changes"
+            />
+
+            <span class="setting-content">
+              <strong> Allow vote changes </strong>
+
+              <small> Participants can change their submitted vote. </small>
+            </span>
+          </label>
+
+          <label class="setting-card">
+            <input
+              type="checkbox"
+              name="show_live_results"
+              id="show-live-results"
+              checked
+            />
+
+            <span class="setting-content">
+              <strong> Show live results </strong>
+
+              <small>
+                Participants can see results while the poll is active.
+              </small>
+            </span>
+          </label>
+        </div>
+      </section>
+
+      <!-- ==================================================
+                 Time Limit
+            =================================================== -->
+
+      <section class="form-section">
+        <div class="section-heading">
+          <div>
+            <span class="section-number"> 04 </span>
+
+            <h2>Time limit</h2>
+
+            <p>Optionally end the poll automatically.</p>
+          </div>
+        </div>
+
+        <div class="time-limit-control">
+          <label for="time-limit"> Duration </label>
+
+          <div class="input-with-unit">
+            <input
+              type="number"
+              id="time-limit"
+              name="time_limit"
+              min="5"
+              max="3600"
+              placeholder="No limit"
+            />
+
+            <span> seconds </span>
+          </div>
+
+          <small> Minimum 5 seconds and maximum 3600 seconds. </small>
+        </div>
+      </section>
+
+      <!-- ==================================================
+                 Quiz Mode
+            =================================================== -->
+
+      <section class="form-section">
+        <div class="section-heading">
+          <div>
+            <span class="section-number"> 05 </span>
+
+            <h2>Quiz mode</h2>
+
+            <p>Turn your poll into a knowledge check.</p>
+          </div>
+        </div>
+
+        <label class="setting-card quiz-toggle">
+          <input type="checkbox" name="quiz_mode" id="quiz-mode" />
+
+          <span class="setting-content">
+            <strong> Enable quiz mode </strong>
+
+            <small>
+              Define the correct answer and evaluate participant responses.
+            </small>
+          </span>
+        </label>
+
+        <div id="correct-answer-section" class="correct-answer-section" hidden>
+          <h3>Correct answer</h3>
+
+          <p>Select the correct option.</p>
+
+          <div id="correct-answer-options" class="correct-answer-options"></div>
+        </div>
+      </section>
+
+      <!-- ==================================================
+                 Submit
+            =================================================== -->
+
+      <section class="form-actions">
+        <a href="{{ url_for('main.index') }}" class="secondary-button">
+          Cancel
+        </a>
+
+        <button type="submit" class="primary-button" id="create-poll-button">
+          <span> Create live poll </span>
+
+          <span aria-hidden="true"> → </span>
+        </button>
+      </section>
+    </form>
+  </div>
+</main>
+
+{% endblock %} {% block scripts %}
+
+<script src="{{ url_for('static', filename='js/create_poll.js') }}"></script>
+
+{% endblock %}

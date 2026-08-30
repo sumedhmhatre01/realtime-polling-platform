@@ -1,0 +1,161 @@
+{% extends "base.html" %} {% block title %} Real-Time Polling and Analytics
+System {% endblock %} {% block styles %}
+
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='css/base.css') }}"
+/>
+
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='css/components.css') }}"
+/>
+
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='css/home.css') }}"
+/>
+
+<!-- Lottie Player -->
+<script
+  type="module"
+  src="https://unpkg.com/@lottiefiles/dotlottie-wc@0.6.2/dist/dotlottie-wc.js"
+></script>
+
+{% endblock %} {% block content %}
+
+<main class="home-page">
+  <!-- ========================================================
+       Hero Section
+  ========================================================= -->
+
+  <section class="home-hero">
+    <div class="page-container home-hero-grid">
+      <div class="home-hero-content">
+        <span class="eyebrow"> REAL-TIME POLLING </span>
+
+        <h1>
+          Ask.
+          <span>Vote.</span>
+          Discover.
+        </h1>
+
+        <p class="home-hero-description">
+          Create live polls, collect responses in real time, and visualize
+          results instantly with a simple and interactive polling experience.
+        </p>
+
+        <div class="home-actions">
+          <a href="{{ url_for('host.create_poll') }}" class="primary-button">
+            Create a Poll
+          </a>
+
+          <a
+            href="{{ url_for('participant.join_poll') }}"
+            class="secondary-button"
+          >
+            Join a Poll
+          </a>
+        </div>
+      </div>
+
+      <!-- ======================================================
+           Lottie Hero Animation
+      ======================================================= -->
+
+      <div class="home-hero-visual" aria-hidden="true">
+        <div class="home-lottie-wrapper">
+          <dotlottie-wc
+            src="{{ url_for(
+              'static',
+              filename='animations/vote-blue.json'
+            ) }}"
+            autoplay
+            loop
+          ></dotlottie-wc>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================================================
+       Features
+  ========================================================= -->
+
+  <section class="home-features">
+    <div class="page-container">
+      <div class="home-section-heading">
+        <span class="eyebrow"> WHY USE IT </span>
+
+        <h2>Everything you need for live polling.</h2>
+
+        <p>
+          From creating a poll to viewing the final results, the entire
+          experience is designed to work in real time.
+        </p>
+      </div>
+
+      <div class="home-feature-grid">
+        <article class="home-feature-card">
+          <div class="home-feature-icon">01</div>
+
+          <h3>Real-Time Voting</h3>
+
+          <p>
+            Participants can submit responses while the host watches the poll
+            update instantly.
+          </p>
+        </article>
+
+        <article class="home-feature-card">
+          <div class="home-feature-icon">02</div>
+
+          <h3>Live Analytics</h3>
+
+          <p>
+            Track participation, vote distribution, response rate, leading
+            options, and voting activity.
+          </p>
+        </article>
+
+        <article class="home-feature-card">
+          <div class="home-feature-icon">03</div>
+
+          <h3>Full Poll Control</h3>
+
+          <p>
+            Start, pause, resume, and end polls while keeping participants
+            synchronized automatically.
+          </p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ========================================================
+       Final CTA
+  ========================================================= -->
+
+  <section class="home-cta">
+    <div class="page-container">
+      <div class="home-cta-card">
+        <div>
+          <span class="eyebrow"> GET STARTED </span>
+
+          <h2>Ready to create your first live poll?</h2>
+
+          <p>
+            Create a poll in seconds and invite participants using a simple poll
+            code.
+          </p>
+        </div>
+
+        <a href="{{ url_for('host.create_poll') }}" class="primary-button">
+          Create a Poll
+        </a>
+      </div>
+    </div>
+  </section>
+</main>
+
+{% endblock %}

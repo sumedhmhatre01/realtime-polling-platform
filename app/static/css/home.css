@@ -1,0 +1,428 @@
+/* ==========================================================
+   Home Page
+========================================================== */
+
+.home-page {
+  overflow: hidden;
+}
+
+/* ==========================================================
+   Hero
+========================================================== */
+
+.home-hero {
+  position: relative;
+
+  padding: 5rem 0 4rem;
+}
+
+.home-hero-grid {
+  display: grid;
+
+  grid-template-columns:
+    minmax(0, 1.05fr)
+    minmax(420px, 0.95fr);
+
+  align-items: center;
+
+  gap: 4rem;
+}
+
+.home-hero-content {
+  position: relative;
+
+  z-index: 1;
+}
+
+.home-hero-content h1 {
+  max-width: 700px;
+
+  margin: 0;
+
+  font-size: clamp(3rem, 7vw, 5.5rem);
+
+  line-height: 0.98;
+
+  letter-spacing: -0.055em;
+}
+
+.home-hero-content h1 span {
+  color: var(--color-primary);
+}
+
+.home-hero-description {
+  max-width: 620px;
+
+  margin: 1.5rem 0 0;
+
+  color: var(--color-text-muted);
+
+  font-size: clamp(1rem, 2vw, 1.2rem);
+
+  line-height: 1.7;
+}
+
+.home-actions {
+  display: flex;
+
+  flex-wrap: wrap;
+
+  gap: 0.75rem;
+
+  margin-top: 2rem;
+}
+
+.home-actions .primary-button,
+.home-actions .secondary-button {
+  min-width: 145px;
+}
+
+/* ==========================================================
+   Hero Lottie Animation
+========================================================== */
+
+.home-hero-visual {
+  position: relative;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  min-height: 420px;
+}
+
+.home-hero-visual::before {
+  content: "";
+
+  position: absolute;
+
+  width: 340px;
+  height: 340px;
+
+  border-radius: 50%;
+
+  background: rgba(99, 91, 255, 0.08);
+
+  filter: blur(2px);
+}
+
+.home-lottie-wrapper {
+  position: relative;
+
+  z-index: 1;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  width: min(100%, 460px);
+
+  min-height: 420px;
+
+  padding: 1rem;
+
+  border-radius: var(--radius-large);
+
+  background: rgba(255, 255, 255, 0.72);
+
+  border: 1px solid rgba(255, 255, 255, 0.85);
+
+  box-shadow: 0 30px 80px rgba(25, 35, 60, 0.1);
+
+  backdrop-filter: blur(12px);
+}
+
+.home-lottie-wrapper dotlottie-wc {
+  display: block;
+
+  width: 100%;
+
+  height: 390px;
+
+  max-width: 390px;
+}
+
+/* ==========================================================
+   Features
+========================================================== */
+
+.home-features {
+  padding: 5rem 0;
+}
+
+.home-section-heading {
+  max-width: 700px;
+
+  margin-bottom: 2.5rem;
+}
+
+.home-section-heading h2 {
+  margin: 0;
+
+  font-size: clamp(2rem, 4vw, 3rem);
+
+  line-height: 1.1;
+
+  letter-spacing: -0.035em;
+}
+
+.home-section-heading p {
+  margin: 1rem 0 0;
+
+  color: var(--color-text-muted);
+
+  font-size: 1rem;
+}
+
+.home-feature-grid {
+  display: grid;
+
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+
+  gap: 1.25rem;
+}
+
+.home-feature-card {
+  min-height: 250px;
+
+  padding: 2rem;
+
+  border: 1px solid var(--color-border);
+
+  border-radius: var(--radius-large);
+
+  background: var(--color-surface);
+
+  box-shadow: var(--shadow-card);
+
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease,
+    border-color 0.25s ease;
+}
+
+.home-feature-card:hover {
+  transform: translateY(-5px);
+
+  border-color: rgba(99, 91, 255, 0.25);
+
+  box-shadow: 0 24px 60px rgba(25, 35, 60, 0.11);
+}
+
+.home-feature-icon {
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  width: 44px;
+  height: 44px;
+
+  margin-bottom: 1.5rem;
+
+  border-radius: 12px;
+
+  background: rgba(99, 91, 255, 0.09);
+
+  color: var(--color-primary);
+
+  font-size: 0.75rem;
+
+  font-weight: 800;
+
+  letter-spacing: 0.05em;
+}
+
+.home-feature-card h3 {
+  margin: 0;
+
+  font-size: 1.25rem;
+}
+
+.home-feature-card p {
+  margin: 0.75rem 0 0;
+
+  color: var(--color-text-muted);
+
+  line-height: 1.7;
+}
+
+/* ==========================================================
+   Final CTA
+========================================================== */
+
+.home-cta {
+  padding: 0 0 5rem;
+}
+
+.home-cta-card {
+  display: flex;
+
+  align-items: center;
+
+  justify-content: space-between;
+
+  gap: 2rem;
+
+  padding: 3rem;
+
+  border-radius: var(--radius-large);
+
+  background: linear-gradient(135deg, #ffffff, #f2f1ff);
+
+  box-shadow: var(--shadow-card);
+}
+
+.home-cta-card h2 {
+  margin: 0;
+
+  font-size: clamp(1.75rem, 4vw, 2.5rem);
+
+  line-height: 1.1;
+
+  letter-spacing: -0.035em;
+}
+
+.home-cta-card p {
+  max-width: 600px;
+
+  margin: 0.75rem 0 0;
+
+  color: var(--color-text-muted);
+}
+
+/* ==========================================================
+   Responsive
+========================================================== */
+
+@media (max-width: 900px) {
+  .home-hero {
+    padding-top: 4rem;
+  }
+
+  .home-hero-grid {
+    grid-template-columns: 1fr;
+
+    gap: 3rem;
+  }
+
+  .home-hero-content {
+    text-align: center;
+  }
+
+  .home-hero-description {
+    margin-left: auto;
+
+    margin-right: auto;
+  }
+
+  .home-actions {
+    justify-content: center;
+  }
+
+  .home-hero-visual {
+    min-height: auto;
+  }
+
+  .home-lottie-wrapper {
+    min-height: 360px;
+  }
+
+  .home-lottie-wrapper dotlottie-wc {
+    height: 340px;
+  }
+
+  .home-feature-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .home-feature-card {
+    min-height: auto;
+  }
+
+  .home-cta-card {
+    flex-direction: column;
+
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 600px) {
+  .home-hero {
+    padding: 3rem 0 2rem;
+  }
+
+  .home-hero-content h1 {
+    font-size: clamp(2.7rem, 13vw, 4rem);
+  }
+
+  .home-hero-description {
+    font-size: 1rem;
+  }
+
+  .home-actions {
+    flex-direction: column;
+  }
+
+  .home-actions .primary-button,
+  .home-actions .secondary-button {
+    width: 100%;
+  }
+
+  .home-hero-visual {
+    padding: 0 0.25rem;
+  }
+
+  .home-lottie-wrapper {
+    min-height: 300px;
+
+    padding: 0.5rem;
+  }
+
+  .home-lottie-wrapper dotlottie-wc {
+    height: 280px;
+  }
+
+  .home-features {
+    padding: 3rem 0;
+  }
+
+  .home-section-heading {
+    margin-bottom: 2rem;
+  }
+
+  .home-feature-card {
+    padding: 1.5rem;
+  }
+
+  .home-cta {
+    padding-bottom: 3rem;
+  }
+
+  .home-cta-card {
+    padding: 2rem 1.5rem;
+  }
+
+  .home-cta-card .primary-button {
+    width: 100%;
+  }
+}
+
+/* ==========================================================
+   Reduced Motion
+========================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  .home-feature-card {
+    transition: none;
+  }
+
+  .home-feature-card:hover {
+    transform: none;
+  }
+}

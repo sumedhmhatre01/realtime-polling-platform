@@ -1,0 +1,1965 @@
+{% extends "base.html" %} {% block title %} Host Dashboard | Real-Time Polling
+and Analytics System {% endblock %} {% block styles %}
+
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='css/base.css') }}"
+/>
+
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='css/components.css') }}"
+/>
+
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='css/dashboard.css') }}"
+/>
+
+{% endblock %} {% block content %}
+
+<main class="dashboard-page">
+  <div class="page-container">
+    {% if error %}
+
+    <section class="dashboard-card dashboard-error-card">
+      <div class="alert alert-error">
+        <strong>Poll unavailable</strong>
+        <span>{{ error }}</span>
+      </div>
+
+      <a href="{{ url_for('host.create_poll') }}" class="primary-button">
+        Create another poll
+      </a>
+    </section>
+
+    {% elif poll %}
+
+    <!-- ====================================================
+         Dashboard Header
+    ===================================================== -->
+
+    <header class="dashboard-header">
+      <div class="dashboard-heading">
+        <span class="eyebrow"> HOST DASHBOARD </span>
+
+        <h1>{{ poll.question }}</h1>
+
+        <p>Manage your live poll and monitor participation in real time.</p>
+      </div>
+
+      <div id="host-connection-status" class="poll-status" aria-live="polite">
+        <span id="host-connection-dot" class="poll-status-dot"></span>
+
+        <span id="host-connection-text"> Connecting... </span>
+      </div>
+    </header>
+
+    <!-- ====================================================
+         Poll Code / Share
+    ===================================================== -->
+
+    <section class="dashboard-card poll-share-card">
+      <div class="poll-share-content">
+        <span class="eyebrow"> POLL CODE </span>
+
+        <div class="poll-code-display" id="poll-code">{{ poll.code }}</div>
+
+        <p>Share this code with participants.</p>
+      </div>
+
+      <button type="button" class="secondary-button" id="copy-poll-code">
+        Copy code
+      </button>
+    </section>
+
+    <!-- ====================================================
+         Poll Status & Controls
+    ===================================================== -->
+
+    <section class="dashboard-card">
+      <div class="dashboard-card-header">
+        <div>
+          <span class="eyebrow"> POLL STATUS </span>
+
+          <h2>Live controls</h2>
+        </div>
+
+        <div id="poll-status" class="poll-status" aria-live="polite">
+          <span
+            id="poll-status-dot"
+            class="poll-status-dot {% if poll.status == 'active' %}active{% elif poll.status == 'paused' %}paused{% elif poll.status == 'ended' %}ended{% elif poll.status == 'expired' %}expired{% endif %}"
+          ></span>
+
+          <strong id="poll-status-text"> {{ poll.status|capitalize }} </strong>
+        </div>
+      </div>
+
+      <!-- ==================================================
+           Time Remaining
+      =================================================== -->
+
+      {% if poll.time_limit %}
+
+      <div class="dashboard-timer" id="poll-timer" aria-live="polite">
+        <span class="eyebrow"> TIME REMAINING </span>
+
+        <strong id="poll-timer-value"> --:-- </strong>
+      </div>
+
+      {% endif %}
+
+      <!-- ==================================================
+           Dynamic Controls
+      =================================================== -->
+
+      <div class="dashboard-controls" id="poll-controls">
+        {% if poll.status == "draft" %}
+
+        <button type="button" class="primary-button" id="start-poll-button">
+          Start poll
+        </button>
+
+        {% elif poll.status == "active" %}
+
+        <button type="button" class="secondary-button" id="pause-poll-button">
+          Pause
+        </button>
+
+        <button type="button" class="danger-button" id="end-poll-button">
+          End poll
+        </button>
+
+        {% elif poll.status == "paused" %}
+
+        <button type="button" class="primary-button" id="resume-poll-button">
+          Resume
+        </button>
+
+        <button type="button" class="danger-button" id="end-poll-button">
+          End poll
+        </button>
+
+        {% else %}
+
+        <span class="dashboard-state-message">
+          This poll is no longer active.
+        </span>
+
+        {% endif %}
+      </div>
+    </section>
+
+    <!-- ====================================================
+         Live Statistics
+    ===================================================== -->
+
+    <section class="dashboard-grid dashboard-stats-grid">
+      <article class="dashboard-card dashboard-stat-card">
+        <span class="eyebrow"> PARTICIPANTS </span>
+
+        <strong class="dashboard-stat-value" id="participant-count">
+          {{ poll.participant_count }}
+        </strong>
+
+        <span class="dashboard-stat-label"> Joined this poll </span>
+      </article>
+
+      <article class="dashboard-card dashboard-stat-card">
+        <span class="eyebrow"> TOTAL VOTES </span>
+
+        <strong class="dashboard-stat-value" id="vote-count">
+          {{ poll.vote_count }}
+        </strong>
+
+        <span class="dashboard-stat-label"> Submitted responses </span>
+      </article>
+
+      <article class="dashboard-card dashboard-stat-card">
+        <span class="eyebrow"> RESPONSE RATE </span>
+
+        <strong class="dashboard-stat-value" id="response-rate">
+          {{ analytics.response_rate }}%
+        </strong>
+
+        <span class="dashboard-stat-label"> Participation response </span>
+      </article>
+
+      <article class="dashboard-card dashboard-stat-card">
+        <span class="eyebrow"> VOTING RATE </span>
+
+        <strong class="dashboard-stat-value" id="voting-rate">
+          {{ analytics.voting_rate }}/s
+        </strong>
+
+        <span class="dashboard-stat-label"> Average votes per second </span>
+      </article>
+    </section>
+
+    <!-- ====================================================
+         Current Leader
+    ===================================================== -->
+
+    <section class="dashboard-card leader-card">
+      <div class="dashboard-card-header">
+        <div>
+          <span class="eyebrow"> CURRENT LEADER </span>
+
+          <h2 id="leading-option">
+            {% if analytics.leading_option %} {{
+            analytics.leading_option.options|join(" / ") }} {% else %} No votes
+            yet {% endif %}
+          </h2>
+        </div>
+
+        <div class="leader-badge">Leading</div>
+      </div>
+
+      <p id="leading-option-votes" class="dashboard-state-message">
+        {% if analytics.leading_option %} {{ analytics.leading_option.votes }}
+        {{ "vote" if analytics.leading_option.votes == 1 else "votes" }} {% else
+        %} Waiting for the first vote. {% endif %}
+      </p>
+    </section>
+
+    <!-- ====================================================
+         Live Results
+    ===================================================== -->
+
+    <section class="dashboard-card live-results-card">
+      <div class="dashboard-card-header">
+        <div>
+          <span class="eyebrow"> LIVE RESULTS </span>
+
+          <h2>Vote distribution</h2>
+        </div>
+
+        <span class="live-indicator">
+          <span class="live-indicator-dot"></span>
+
+          Live
+        </span>
+      </div>
+
+      <div id="live-results" class="live-results">
+        {% for option in poll.options %}
+
+        <div class="result-row" data-option-index="{{ loop.index0 }}">
+          <div class="result-row-header">
+            <strong> {{ option }} </strong>
+
+            <span class="result-percentage">
+              {{ analytics.option_percentages[loop.index0] }}%
+            </span>
+          </div>
+
+          <div class="result-progress">
+            <div
+              class="result-progress-bar"
+              style="width: {{ analytics.option_percentages[loop.index0] }}%"
+            ></div>
+          </div>
+
+          <div class="result-votes">
+            {{ analytics.option_votes[loop.index0] }} {{ "vote" if
+            analytics.option_votes[loop.index0] == 1 else "votes" }}
+          </div>
+        </div>
+
+        {% endfor %}
+      </div>
+    </section>
+
+    <!-- ====================================================
+         Votes Over Time
+    ===================================================== -->
+
+    <section class="dashboard-card votes-over-time-card">
+      <div class="dashboard-card-header">
+        <div>
+          <span class="eyebrow"> LIVE ANALYTICS </span>
+
+          <h2>Votes over time</h2>
+        </div>
+
+        <span class="live-indicator">
+          <span class="live-indicator-dot"></span>
+
+          Live
+        </span>
+      </div>
+
+      <div
+        id="votes-over-time-chart"
+        class="votes-over-time-chart"
+        aria-label="Votes over time chart"
+      >
+        <div id="votes-over-time-empty" class="activity-empty">
+          Waiting for votes...
+        </div>
+      </div>
+    </section>
+
+    <!-- ====================================================
+         Question & Options
+    ===================================================== -->
+
+    <section class="dashboard-grid dashboard-information-grid">
+      <article class="dashboard-card">
+        <span class="eyebrow"> QUESTION </span>
+
+        <h2 class="dashboard-question">{{ poll.question }}</h2>
+      </article>
+
+      <article class="dashboard-card">
+        <span class="eyebrow"> OPTIONS </span>
+
+        <ol class="dashboard-options">
+          {% for option in poll.options %}
+
+          <li>
+            <span class="option-number"> {{ loop.index }} </span>
+
+            <strong> {{ option }} </strong>
+          </li>
+
+          {% endfor %}
+        </ol>
+      </article>
+    </section>
+
+    <!-- ====================================================
+         Real-Time Activity
+    ===================================================== -->
+
+    <section class="dashboard-card activity-card">
+      <div class="dashboard-card-header">
+        <div>
+          <span class="eyebrow"> REAL-TIME ACTIVITY </span>
+
+          <h2>Live event feed</h2>
+        </div>
+      </div>
+
+      <div id="activity-feed" class="activity-feed" aria-live="polite">
+        <div class="activity-empty">Waiting for live activity...</div>
+      </div>
+    </section>
+
+    {% endif %}
+  </div>
+</main>
+
+{% endblock %} {% block scripts %}
+
+<script src="{{ url_for('static', filename='js/socket.js') }}"></script>
+
+{% if poll %}
+
+<script>
+
+  document.addEventListener("DOMContentLoaded", () => {
+
+    /* ======================================================
+       Poll Information
+    ======================================================= */
+
+    const pollCode =
+      "{{ poll.code }}";
+
+    const initialStatus =
+      {{ poll.status | tojson }};
+
+    const initialEndsAt = {{
+      poll.ends_at.isoformat() | tojson
+      if poll.ends_at
+      else "null"
+    }};
+
+    /* ======================================================
+       DOM References
+    ======================================================= */
+
+    const connectionDot =
+      document.getElementById(
+        "host-connection-dot"
+      );
+
+    const connectionText =
+      document.getElementById(
+        "host-connection-text"
+      );
+
+    const statusDot =
+      document.getElementById(
+        "poll-status-dot"
+      );
+
+    const statusText =
+      document.getElementById(
+        "poll-status-text"
+      );
+
+    const participantCount =
+      document.getElementById(
+        "participant-count"
+      );
+
+    const voteCount =
+      document.getElementById(
+        "vote-count"
+      );
+
+    const responseRate =
+      document.getElementById(
+        "response-rate"
+      );
+
+    const votingRate =
+      document.getElementById(
+        "voting-rate"
+      );
+
+    const leadingOption =
+      document.getElementById(
+        "leading-option"
+      );
+
+    const leadingOptionVotes =
+      document.getElementById(
+        "leading-option-votes"
+      );
+
+    const liveResults =
+      document.getElementById(
+        "live-results"
+      );
+
+    const activityFeed =
+      document.getElementById(
+        "activity-feed"
+      );
+
+    const controls =
+      document.getElementById(
+        "poll-controls"
+      );
+
+    const timer =
+      document.getElementById(
+        "poll-timer"
+      );
+
+    const timerValue =
+      document.getElementById(
+        "poll-timer-value"
+      );
+
+    const votesOverTimeChart =
+      document.getElementById(
+        "votes-over-time-chart"
+      );
+
+    const votesOverTimeEmpty =
+      document.getElementById(
+        "votes-over-time-empty"
+      );
+
+    /* ======================================================
+       Timer State
+    ======================================================= */
+
+    let timerInterval =
+      null;
+
+    let timerEndsAt =
+      null;
+
+    let timerStatus =
+      initialStatus;
+
+    /* ======================================================
+       Votes Over Time State
+    ======================================================= */
+
+    let votesOverTimeData = [];
+
+    /* ======================================================
+       Timer Timestamp Parser
+    ======================================================= */
+
+    function parseServerDate(value) {
+
+      if (!value) {
+        return null;
+      }
+
+      const normalizedValue =
+        String(value).endsWith("Z")
+          ? String(value)
+          : `${String(value)}Z`;
+
+      const timestamp =
+        new Date(
+          normalizedValue
+        ).getTime();
+
+      if (!Number.isFinite(timestamp)) {
+        return null;
+      }
+
+      return timestamp;
+    }
+
+    /* ======================================================
+       Timer Formatting
+    ======================================================= */
+
+    function formatTime(totalSeconds) {
+
+      const safeSeconds =
+        Math.max(
+          0,
+          Math.ceil(totalSeconds)
+        );
+
+      const minutes =
+        Math.floor(
+          safeSeconds / 60
+        );
+
+      const seconds =
+        safeSeconds % 60;
+
+      return `${String(minutes).padStart(2, "0")}:${String(seconds).padStart(2, "0")}`;
+    }
+
+    /* ======================================================
+       Stop Timer
+    ======================================================= */
+
+    function stopTimer() {
+
+      if (
+        timerInterval !== null
+      ) {
+
+        window.clearInterval(
+          timerInterval
+        );
+
+        timerInterval =
+          null;
+      }
+    }
+
+    /* ======================================================
+       Update Timer Display
+    ======================================================= */
+
+    function updateTimerDisplay() {
+
+      if (
+        !timer ||
+        !timerValue ||
+        !timerEndsAt
+      ) {
+        return;
+      }
+
+      const remainingMilliseconds =
+        timerEndsAt -
+        Date.now();
+
+      const remainingSeconds =
+        remainingMilliseconds /
+        1000;
+
+      timerValue.textContent =
+        formatTime(
+          remainingSeconds
+        );
+
+      if (
+        remainingMilliseconds <= 0
+      ) {
+
+        timerValue.textContent =
+          "00:00";
+
+        stopTimer();
+      }
+    }
+
+    /* ======================================================
+       Start Timer
+    ======================================================= */
+
+    function startTimer() {
+
+      if (
+        !timer ||
+        !timerValue ||
+        !timerEndsAt
+      ) {
+        return;
+      }
+
+      stopTimer();
+
+      updateTimerDisplay();
+
+      timerInterval =
+        window.setInterval(
+          updateTimerDisplay,
+          250
+        );
+    }
+
+    /* ======================================================
+       Update Timer State
+    ======================================================= */
+
+    function updateTimerState(
+      status,
+      endsAt
+    ) {
+
+      timerStatus =
+        status;
+
+      if (endsAt) {
+
+        const parsedEndsAt =
+          parseServerDate(
+            endsAt
+          );
+
+        if (
+          parsedEndsAt !== null
+        ) {
+
+          timerEndsAt =
+            parsedEndsAt;
+        }
+      }
+
+      if (
+        !timer ||
+        !timerValue
+      ) {
+        return;
+      }
+
+      if (
+        status === "active"
+      ) {
+
+        if (timerEndsAt) {
+          startTimer();
+        }
+
+        return;
+      }
+
+      if (
+        status === "paused"
+      ) {
+
+        updateTimerDisplay();
+
+        stopTimer();
+
+        return;
+      }
+
+      if (
+        status === "expired"
+      ) {
+
+        stopTimer();
+
+        timerValue.textContent =
+          "00:00";
+
+        return;
+      }
+
+      if (
+        status === "ended"
+      ) {
+
+        updateTimerDisplay();
+
+        stopTimer();
+      }
+    }
+
+    /* ======================================================
+       Connection Status
+    ======================================================= */
+
+    function updateConnectionStatus(
+      connected,
+      message
+    ) {
+
+      if (connectionDot) {
+
+        connectionDot.classList.toggle(
+          "active",
+          connected
+        );
+      }
+
+      if (connectionText) {
+
+        connectionText.textContent =
+          message ||
+          (
+            connected
+              ? "Connected"
+              : "Disconnected"
+          );
+      }
+    }
+
+    /* ======================================================
+       Poll Status
+    ======================================================= */
+
+    function updatePollStatus(
+      status
+    ) {
+
+      if (!status) {
+        return;
+      }
+
+      if (statusText) {
+
+        statusText.textContent =
+          status.charAt(0).toUpperCase() +
+          status.slice(1);
+      }
+
+      if (statusDot) {
+
+        statusDot.classList.remove(
+          "active",
+          "paused",
+          "ended",
+          "expired"
+        );
+
+        if (
+          status === "active"
+        ) {
+
+          statusDot.classList.add(
+            "active"
+          );
+
+        } else if (
+          status === "paused"
+        ) {
+
+          statusDot.classList.add(
+            "paused"
+          );
+
+        } else if (
+          status === "ended"
+        ) {
+
+          statusDot.classList.add(
+            "ended"
+          );
+
+        } else if (
+          status === "expired"
+        ) {
+
+          statusDot.classList.add(
+            "expired"
+          );
+        }
+      }
+    }
+
+    /* ======================================================
+       Dynamic Poll Controls
+    ======================================================= */
+
+    function updatePollControls(
+      status
+    ) {
+
+      if (!controls) {
+        return;
+      }
+
+      if (
+        status === "draft"
+      ) {
+
+        controls.innerHTML = `
+          <button
+            type="button"
+            class="primary-button"
+            id="start-poll-button"
+          >
+            Start poll
+          </button>
+        `;
+
+      } else if (
+        status === "active"
+      ) {
+
+        controls.innerHTML = `
+          <button
+            type="button"
+            class="secondary-button"
+            id="pause-poll-button"
+          >
+            Pause
+          </button>
+
+          <button
+            type="button"
+            class="danger-button"
+            id="end-poll-button"
+          >
+            End poll
+          </button>
+        `;
+
+      } else if (
+        status === "paused"
+      ) {
+
+        controls.innerHTML = `
+          <button
+            type="button"
+            class="primary-button"
+            id="resume-poll-button"
+          >
+            Resume
+          </button>
+
+          <button
+            type="button"
+            class="danger-button"
+            id="end-poll-button"
+          >
+            End poll
+          </button>
+        `;
+
+      } else {
+
+        controls.innerHTML = `
+          <span class="dashboard-state-message">
+            This poll is no longer active.
+          </span>
+        `;
+      }
+
+      bindPollControls();
+    }
+
+    /* ======================================================
+       Participant Count
+    ======================================================= */
+
+    function updateParticipantCount(
+      count
+    ) {
+
+      if (!participantCount) {
+        return;
+      }
+
+      const value =
+        Number(count);
+
+      participantCount.textContent =
+        Number.isFinite(value)
+          ? value
+          : 0;
+    }
+
+    /* ======================================================
+       Live Results
+    ======================================================= */
+
+    function updateLiveResults(
+      analytics
+    ) {
+
+      if (
+        !analytics ||
+        !liveResults
+      ) {
+        return;
+      }
+
+      const optionVotes =
+        Array.isArray(
+          analytics.option_votes
+        )
+          ? analytics.option_votes
+          : [];
+
+      const optionPercentages =
+        Array.isArray(
+          analytics.option_percentages
+        )
+          ? analytics.option_percentages
+          : [];
+
+      const leader =
+        analytics.leading_option;
+
+      const leaderIndexes =
+        leader &&
+        Array.isArray(
+          leader.indexes
+        )
+          ? leader.indexes
+          : [];
+
+      const resultRows =
+        liveResults.querySelectorAll(
+          ".result-row"
+        );
+
+      resultRows.forEach(
+        (row) => {
+
+          const index =
+            Number(
+              row.dataset.optionIndex
+            );
+
+          const votes =
+            Number(
+              optionVotes[index] || 0
+            );
+
+          const percentage =
+            Number(
+              optionPercentages[index] || 0
+            );
+
+          const percentageElement =
+            row.querySelector(
+              ".result-percentage"
+            );
+
+          const progressBar =
+            row.querySelector(
+              ".result-progress-bar"
+            );
+
+          const votesElement =
+            row.querySelector(
+              ".result-votes"
+            );
+
+          /*
+           * Highlight every tied leading option.
+           */
+
+          row.classList.toggle(
+            "leading",
+            leaderIndexes.includes(index)
+          );
+
+          if (percentageElement) {
+
+            percentageElement.textContent =
+              `${percentage}%`;
+          }
+
+          if (progressBar) {
+
+            const safePercentage =
+              Math.min(
+                Math.max(
+                  percentage,
+                  0
+                ),
+                100
+              );
+
+            progressBar.style.width =
+              `${safePercentage}%`;
+          }
+
+          if (votesElement) {
+
+            votesElement.textContent =
+              `${votes} ${
+                votes === 1
+                  ? "vote"
+                  : "votes"
+              }`;
+          }
+        }
+      );
+    }
+
+    /* ======================================================
+       Votes Over Time
+       ======================================================= */
+
+    function updateVotesOverTime(
+      analytics
+    ) {
+
+      if (
+        !votesOverTimeChart ||
+        !analytics
+      ) {
+        return;
+      }
+
+      const data =
+        Array.isArray(
+          analytics.votes_over_time
+        )
+          ? analytics.votes_over_time
+          : [];
+
+      votesOverTimeData =
+        data;
+
+      const existingPoints =
+        votesOverTimeChart.querySelectorAll(
+          ".votes-over-time-point"
+        );
+
+      existingPoints.forEach(
+        (point) => {
+          point.remove();
+        }
+      );
+
+      const existingLines =
+        votesOverTimeChart.querySelectorAll(
+          ".votes-over-time-line"
+        );
+
+      existingLines.forEach(
+        (line) => {
+          line.remove();
+        }
+      );
+
+      if (
+        data.length === 0
+      ) {
+
+        if (votesOverTimeEmpty) {
+
+          votesOverTimeEmpty.hidden =
+            false;
+        }
+
+        return;
+      }
+
+      if (votesOverTimeEmpty) {
+
+        votesOverTimeEmpty.hidden =
+          true;
+      }
+
+      const visibleData =
+        data.slice(-30);
+
+      const maxVotes =
+        Math.max(
+          1,
+          ...visibleData.map(
+            (item) =>
+              Number(item.count || 0)
+          )
+        );
+
+      const points =
+        visibleData.map(
+          (item, index) => {
+
+            const count =
+              Number(
+                item.count || 0
+              );
+
+            const leftPercentage =
+              visibleData.length === 1
+                ? 50
+                : (
+                    index /
+                    (visibleData.length - 1)
+                  ) * 100;
+
+            const bottomPercentage =
+              (
+                count /
+                maxVotes
+              ) * 100;
+
+            return {
+              count,
+              leftPercentage,
+              bottomPercentage,
+            };
+          }
+        );
+
+      for (
+        let index = 1;
+        index < points.length;
+        index += 1
+      ) {
+
+        const previous =
+          points[index - 1];
+
+        const current =
+          points[index];
+
+        const deltaX =
+          current.leftPercentage -
+          previous.leftPercentage;
+
+        const deltaY =
+          current.bottomPercentage -
+          previous.bottomPercentage;
+
+        const length =
+          Math.sqrt(
+            (
+              deltaX *
+              deltaX
+            ) +
+            (
+              deltaY *
+              deltaY
+            )
+          );
+
+        const angle =
+          Math.atan2(
+            deltaY,
+            deltaX
+          ) *
+          (180 / Math.PI);
+
+        const line =
+          document.createElement(
+            "div"
+          );
+
+        line.className =
+          "votes-over-time-line";
+
+        line.style.left =
+          `${previous.leftPercentage}%`;
+
+        line.style.bottom =
+          `${previous.bottomPercentage}%`;
+
+        line.style.width =
+          `${length}%`;
+
+        line.style.transform =
+          `rotate(${angle}deg)`;
+
+        votesOverTimeChart.appendChild(
+          line
+        );
+      }
+
+      points.forEach(
+        (point) => {
+
+          const element =
+            document.createElement(
+              "div"
+            );
+
+          element.className =
+            "votes-over-time-point";
+
+          element.style.left =
+            `${point.leftPercentage}%`;
+
+          element.style.bottom =
+            `${point.bottomPercentage}%`;
+
+          element.title =
+            `${point.count} ${
+              point.count === 1
+                ? "vote"
+                : "votes"
+            }`;
+
+          votesOverTimeChart.appendChild(
+            element
+          );
+        }
+      );
+    }
+
+    /* ======================================================
+       Analytics
+       ======================================================= */
+
+    function updateAnalytics(
+      analytics
+    ) {
+
+      if (!analytics) {
+        return;
+      }
+
+      if (
+        analytics.total_participants !==
+        undefined
+      ) {
+
+        updateParticipantCount(
+          analytics.total_participants
+        );
+      }
+
+      if (voteCount) {
+
+        voteCount.textContent =
+          Number(
+            analytics.total_votes || 0
+          );
+      }
+
+      if (responseRate) {
+
+        responseRate.textContent =
+          `${Number(
+            analytics.response_rate || 0
+          )}%`;
+      }
+
+      if (votingRate) {
+
+        votingRate.textContent =
+          `${Number(
+            analytics.voting_rate || 0
+          )}/s`;
+      }
+
+      if (
+        leadingOption &&
+        leadingOptionVotes
+      ) {
+
+        const leader =
+          analytics.leading_option;
+
+        if (
+          leader &&
+          Array.isArray(
+            leader.options
+          ) &&
+          leader.options.length > 0
+        ) {
+
+          leadingOption.textContent =
+            leader.options.join(
+              " / "
+            );
+
+          const leaderVotes =
+            Number(
+              leader.votes || 0
+            );
+
+          leadingOptionVotes.textContent =
+            `${leaderVotes} ${
+              leaderVotes === 1
+                ? "vote"
+                : "votes"
+            }`;
+
+        } else {
+
+          leadingOption.textContent =
+            "No votes yet";
+
+          leadingOptionVotes.textContent =
+            "Waiting for the first vote.";
+        }
+      }
+
+      updateLiveResults(
+        analytics
+      );
+
+      updateVotesOverTime(
+        analytics
+      );
+    }
+
+    /* ======================================================
+       Activity Feed
+       ======================================================= */
+
+    function addActivity(
+      message
+    ) {
+
+      if (!activityFeed) {
+        return;
+      }
+
+      const emptyMessage =
+        activityFeed.querySelector(
+          ".activity-empty"
+        );
+
+      if (emptyMessage) {
+        emptyMessage.remove();
+      }
+
+      const item =
+        document.createElement(
+          "div"
+        );
+
+      item.className =
+        "activity-item";
+
+      const messageElement =
+        document.createElement(
+          "strong"
+        );
+
+      messageElement.textContent =
+        message;
+
+      const timeElement =
+        document.createElement(
+          "span"
+        );
+
+      timeElement.textContent =
+        new Date().toLocaleTimeString();
+
+      item.appendChild(
+        messageElement
+      );
+
+      item.appendChild(
+        timeElement
+      );
+
+      activityFeed.prepend(
+        item
+      );
+
+      const items =
+        activityFeed.querySelectorAll(
+          ".activity-item"
+        );
+
+      if (items.length > 20) {
+
+        items[
+          items.length - 1
+        ].remove();
+      }
+    }
+
+    /* ======================================================
+       Bind Poll Controls
+       ======================================================= */
+
+    function bindPollControls() {
+
+      const startButton =
+        document.getElementById(
+          "start-poll-button"
+        );
+
+      if (startButton) {
+
+        startButton.addEventListener(
+          "click",
+          () => {
+
+            startButton.disabled =
+              true;
+
+            PollSocket.emit(
+              "start_poll",
+              {
+                poll_code:
+                  pollCode,
+              }
+            );
+          }
+        );
+      }
+
+      const pauseButton =
+        document.getElementById(
+          "pause-poll-button"
+        );
+
+      if (pauseButton) {
+
+        pauseButton.addEventListener(
+          "click",
+          () => {
+
+            pauseButton.disabled =
+              true;
+
+            PollSocket.emit(
+              "pause_poll",
+              {
+                poll_code:
+                  pollCode,
+              }
+            );
+          }
+        );
+      }
+
+      const resumeButton =
+        document.getElementById(
+          "resume-poll-button"
+        );
+
+      if (resumeButton) {
+
+        resumeButton.addEventListener(
+          "click",
+          () => {
+
+            resumeButton.disabled =
+              true;
+
+            PollSocket.emit(
+              "resume_poll",
+              {
+                poll_code:
+                  pollCode,
+              }
+            );
+          }
+        );
+      }
+
+      const endButton =
+        document.getElementById(
+          "end-poll-button"
+        );
+
+      if (endButton) {
+
+        endButton.addEventListener(
+          "click",
+          () => {
+
+            const confirmed =
+              window.confirm(
+                "Are you sure you want to end this poll?"
+              );
+
+            if (!confirmed) {
+              return;
+            }
+
+            endButton.disabled =
+              true;
+
+            PollSocket.emit(
+              "end_poll",
+              {
+                poll_code:
+                  pollCode,
+              }
+            );
+          }
+        );
+      }
+    }
+
+    /* ======================================================
+       Connect
+       ======================================================= */
+
+    PollSocket.connect();
+
+    /* ======================================================
+       Connection
+       ======================================================= */
+
+    PollSocket.on(
+      "connection_status",
+      (data) => {
+
+        updateConnectionStatus(
+          Boolean(
+            data &&
+            data.connected
+          ),
+          data &&
+          data.message
+        );
+      }
+    );
+
+    /* ======================================================
+       Socket Errors
+       ======================================================= */
+
+    PollSocket.on(
+      "socket_error",
+      (data) => {
+
+        console.error(
+          "Socket error:",
+          data
+        );
+
+        addActivity(
+          data &&
+          data.message
+            ? data.message
+            : "Socket error."
+        );
+
+        const activeButton =
+          document.querySelector(
+            "#poll-controls button:disabled"
+          );
+
+        if (activeButton) {
+
+          activeButton.disabled =
+            false;
+        }
+      }
+    );
+
+    /* ======================================================
+       Participant Count
+       ======================================================= */
+
+    PollSocket.on(
+      "participant_count_updated",
+      (data) => {
+
+        if (
+          !data ||
+          data.poll_code !==
+            pollCode
+        ) {
+          return;
+        }
+
+        updateParticipantCount(
+          data.participant_count
+        );
+
+        addActivity(
+          "A participant joined the poll."
+        );
+      }
+    );
+
+    /* ======================================================
+       Results Updated
+       ======================================================= */
+
+    PollSocket.on(
+      "results_updated",
+      (data) => {
+
+        if (
+          !data ||
+          data.poll_code !==
+            pollCode
+        ) {
+          return;
+        }
+
+        updateAnalytics(
+          data.analytics
+        );
+
+        addActivity(
+          "Live results updated."
+        );
+      }
+    );
+
+    /* ======================================================
+       Vote Submitted
+       ======================================================= */
+
+    PollSocket.on(
+      "vote_submitted",
+      (data) => {
+
+        if (
+          !data ||
+          data.poll_code !==
+            pollCode
+        ) {
+          return;
+        }
+
+        addActivity(
+          "A new vote was submitted."
+        );
+      }
+    );
+
+    /* ======================================================
+       Vote Updated
+       ======================================================= */
+
+    PollSocket.on(
+      "vote_updated",
+      (data) => {
+
+        if (
+          !data ||
+          data.poll_code !==
+            pollCode
+        ) {
+          return;
+        }
+
+        addActivity(
+          "A vote was updated."
+        );
+      }
+    );
+
+    /* ======================================================
+       Poll Started
+       ======================================================= */
+
+    PollSocket.on(
+      "poll_started",
+      (data) => {
+
+        if (
+          !data ||
+          data.poll_code !==
+            pollCode
+        ) {
+          return;
+        }
+
+        updatePollStatus(
+          data.status
+        );
+
+        updatePollControls(
+          data.status
+        );
+
+        updateTimerState(
+          "active",
+          data.ends_at
+        );
+
+        addActivity(
+          "Poll started."
+        );
+      }
+    );
+
+    /* ======================================================
+       Poll Paused
+       ======================================================= */
+
+    PollSocket.on(
+      "poll_paused",
+      (data) => {
+
+        if (
+          !data ||
+          data.poll_code !==
+            pollCode
+        ) {
+          return;
+        }
+
+        updatePollStatus(
+          data.status
+        );
+
+        updatePollControls(
+          data.status
+        );
+
+        updateTimerState(
+          "paused",
+          data.ends_at
+        );
+
+        addActivity(
+          "Poll paused."
+        );
+      }
+    );
+
+    /* ======================================================
+       Poll Resumed
+       ======================================================= */
+
+    PollSocket.on(
+      "poll_resumed",
+      (data) => {
+
+        if (
+          !data ||
+          data.poll_code !==
+            pollCode
+        ) {
+          return;
+        }
+
+        updatePollStatus(
+          data.status
+        );
+
+        updatePollControls(
+          data.status
+        );
+
+        updateTimerState(
+          "active",
+          data.ends_at
+        );
+
+        addActivity(
+          "Poll resumed."
+        );
+      }
+    );
+
+    /* ======================================================
+       Poll Ended
+       ======================================================= */
+
+    PollSocket.on(
+      "poll_ended",
+      (data) => {
+
+        if (
+          !data ||
+          data.poll_code !==
+            pollCode
+        ) {
+          return;
+        }
+
+        updatePollStatus(
+          data.status
+        );
+
+        updatePollControls(
+          data.status
+        );
+
+        updateTimerState(
+          "ended",
+          data.ends_at
+        );
+
+        addActivity(
+          "Poll ended."
+        );
+      }
+    );
+
+    /* ======================================================
+       Poll Expired
+       ======================================================= */
+
+    PollSocket.on(
+      "poll_expired",
+      (data) => {
+
+        if (
+          !data ||
+          data.poll_code !==
+            pollCode
+        ) {
+          return;
+        }
+
+        updatePollStatus(
+          "expired"
+        );
+
+        updatePollControls(
+          "expired"
+        );
+
+        updateTimerState(
+          "expired",
+          data.ends_at
+        );
+
+        addActivity(
+          "Poll expired."
+        );
+      }
+    );
+
+    /* ======================================================
+       Current Poll State
+       ======================================================= */
+
+    PollSocket.on(
+      "poll_state",
+      (data) => {
+
+        if (
+          !data ||
+          data.poll_code !==
+            pollCode
+        ) {
+          return;
+        }
+
+        updatePollStatus(
+          data.status
+        );
+
+        updatePollControls(
+          data.status
+        );
+
+        updateTimerState(
+          data.status,
+          data.ends_at
+        );
+      }
+    );
+
+    /* ======================================================
+       Copy Poll Code
+       ======================================================= */
+
+    const copyButton =
+      document.getElementById(
+        "copy-poll-code"
+      );
+
+    if (copyButton) {
+
+      copyButton.addEventListener(
+        "click",
+        async () => {
+
+          try {
+
+            await navigator.clipboard.writeText(
+              pollCode
+            );
+
+            const originalText =
+              copyButton.textContent;
+
+            copyButton.textContent =
+              "Copied!";
+
+            setTimeout(
+              () => {
+
+                copyButton.textContent =
+                  originalText;
+
+              },
+              1500
+            );
+
+          } catch (error) {
+
+            console.error(
+              "Unable to copy poll code:",
+              error
+            );
+          }
+        }
+      );
+    }
+
+    /* ======================================================
+       Initial Timer State
+       ======================================================= */
+
+    const parsedInitialEndsAt =
+      parseServerDate(
+        initialEndsAt
+      );
+
+    if (
+      parsedInitialEndsAt !== null
+    ) {
+
+      timerEndsAt =
+        parsedInitialEndsAt;
+    }
+
+    /* ======================================================
+       Initial Poll State
+       ======================================================= */
+
+    updatePollStatus(
+      initialStatus
+    );
+
+    updateTimerState(
+      initialStatus,
+      initialEndsAt
+    );
+
+    /* ======================================================
+       Initial Analytics
+       ======================================================= */
+
+    updateAnalytics(
+      {{ analytics | tojson }}
+    );
+
+    /* ======================================================
+       Initial Controls
+       ======================================================= */
+
+    bindPollControls();
+
+    /* ======================================================
+       Join Poll Room
+       ======================================================= */
+
+    PollSocket.joinPoll(
+      pollCode
+    );
+
+  });
+</script>
+
+{% endif %} {% endblock %}

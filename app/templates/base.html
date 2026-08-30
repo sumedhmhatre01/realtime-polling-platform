@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <meta name="description" content="Real-Time Polling and Analytics System" />
+
+    <meta name="theme-color" content="#635bff" />
+
+    <title>
+      {% block title %} Real-Time Polling and Analytics System {% endblock %}
+    </title>
+
+    {% block styles %}{% endblock %}
+  </head>
+
+  <body>
+    {% block content %}{% endblock %}
+
+    <!-- ======================================================
+         Socket.IO Client
+    ======================================================= -->
+
+    <script
+      src="https://cdn.socket.io/4.8.1/socket.io.min.js"
+      crossorigin="anonymous"
+    ></script>
+
+    <!-- ======================================================
+         Page-specific JavaScript
+    ======================================================= -->
+
+    {% block scripts %}{% endblock %}
+  </body>
+</html>
